@@ -6,12 +6,12 @@
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 		<!-- <link rel="stylesheet" href="style/style.css"> -->
-		<script src="../script/funcs.js"></script>
+		<script src="../scripts/funcs.js"></script>
 		<link rel="stylesheet" href="../styles/bootstrap-4.3.1-dist/css/bootstrap.css">
 	</head>
 	<body align="center" style="background-color: red">
 		<nav class="navbar navbar-expand-lg navbar-light bg-primary">
-		  <a class="navbar-brand" href="#">Inicio</a>
+		  <a class="navbar-brand" href="inicio.html">Inicio</a>
 		  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
 		    <span class="navbar-toggler-icon"></span>
 		  </button>
@@ -19,7 +19,7 @@
 		  <div class="collapse navbar-collapse" id="navbarSupportedContent">
 		    <ul class="navbar-nav mr-auto">
 		     <li class="nav-item navbar-brand">
-		      	<a class="nav-link" href="#" tabindex="-1">¿Quienes somos?</a>
+		      	<a class="nav-link" href="quienesSomos.html" tabindex="-1">¿Quienes somos?</a>
 		      </li>
 		       <li class="nav-item dropdown navbar-brand">
 		        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -40,25 +40,26 @@
 		      	<a class="nav-link" href="#" tabindex="-1">Actividades</a>
 		      </li>
 		      <li class="nav-item navbar-brand">
-		        <a class="nav-link " href="#" tabindex="-1">Preguntas frecuentes</a>
+		        <a class="nav-link " href="Preguntas frecuentes.html" tabindex="-1">Preguntas frecuentes</a>
 		      </li>
 		      <li class="nav-item navbar-brand">
-		        <a class="nav-link" href="#" tabindex="-1">Intranet</a>
+		        <a class="nav-link" href="intranet.html" tabindex="-1">Intranet</a>
 		      </li>
 		    </ul>
 		  </div>
 		</nav>
 		<div class="container rounded-lg" style="background-color: white;">
 			<div style="padding-left:30%;padding-right: 30%;padding-top:10%;padding-bottom:10%" >
-				<form onsubmit="return loginF()">
+				<form onsubmit="return loginF()" name="login">
 		           <div class="form-group">
 		           	 	<label for="exampleInputEmail1">Correo Electrónico</label>
-		    			<input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="ejemplo@correo.com">
+		    			<input type="email" name="user" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="ejemplo@correo.com" required/>
 		 		   </div>
 		           <div class="form-group">
 		    			<label for="exampleInputPassword1">Contraseña</label>
-		   			    <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Contraseña">
+		   			    <input type="password" name="pass" class="form-control" id="exampleInputPassword1" placeholder="Contraseña" required/>
 		 		   </div>
+		 		   <p id="aviso" class="text-success" style="width:320px;border-radius: 5px;"></p>
 		           <div class="form-group form-check">
 		   			    <input type="checkbox" class="form-check-input" id="exampleCheck1">
 		   			    <label class="form-check-label" for="exampleCheck1">Mantenerse conectado</label>
