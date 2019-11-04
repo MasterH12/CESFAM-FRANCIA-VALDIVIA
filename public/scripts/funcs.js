@@ -26,10 +26,11 @@ async function inicializar(){
 			.then(function(querySnapshot) {
 				var validado= true;
 			});
+		}
 		else{
 			window.location.href="../index.html";
 		}
-	}
+	});
 }
 class Visita{
 	constructor(){
@@ -39,9 +40,19 @@ class Visita{
 }
 class Usuario{
 }
-
 class Admin extends Usuario{
 	constructor(){
 		super();
 	}
+}
+
+function loginF(){
+	var p = document.forms["login"]["pass"].value.toString();
+    var u = document.forms["login"]["user"].value.toString();
+
+    if(p=="admin" && u=="admin@correo"){
+    	document.getElementById("aviso").innerHTML = "conectado";
+    	document.getElementById("aviso").style.class = "text-success";
+    }
+    return false;
 }
