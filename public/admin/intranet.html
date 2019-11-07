@@ -1,15 +1,34 @@
-<html>
+<!DOCTYPE html>
+<html lang='es'>
 	<head>
 		<title>En construcción...</title>
-		<meta charset="utf-8">
+		<meta charset="utf-8" />
 		<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+		<!-- Estilos propios y bootstrap-->
 		<!-- <link rel="stylesheet" href="style/style.css"> -->
-		<script src="../scripts/funcs.js"></script>
+		<link rel="stylesheet" href="../styles/bootstrap-4.3.1-dist/css/bootstrap.css">
+
+		<!-- Librerías necesarias para inicializar la aplicación y sus funciones
+		<script src="//code.jquery.com/jquery-1.12.4.min.js"></script> -->
+		<script src="../style/bootstrap-4.3.1-dist/js/bootstrap.bundle.min.js"></script>
+
 		<script src="https://www.gstatic.com/firebasejs/7.2.3/firebase-app.js"></script>
 		<script src="https://www.gstatic.com/firebasejs/5.9.1/firebase-auth.js"></script>
-		<link rel="stylesheet" href="../styles/bootstrap-4.3.1-dist/css/bootstrap.css">
+		<script src="https://www.gstatic.com/firebasejs/6.6.2/firebase-firestore.js"></script>
+		<script src="../scripts/funcs.js"></script>
+
+
+		<!-- librerías necesarias para calendario -->
+		<link href='../scripts/fullcalendar-4.3.1/packages/core/main.css' rel='stylesheet' />
+	    <link href='../scripts/fullcalendar-4.3.1/packages/daygrid/main.css' rel='stylesheet' />
+
+	    <script src='../scripts/fullcalendar-4.3.1/packages/core/main.js'></script>
+	    <script src='../scripts/fullcalendar-4.3.1/packages/daygrid/main.js'></script>
+	    <script src='../scripts/fullcalendar-4.3.1/packages/interaction/main.js'></script>
+	    <script src='../scripts/fullcalendar-4.3.1/packages/core/locales/es.js'></script>
+		
 		<script>
 			var PAG = auth();
 			function auth(){
@@ -57,36 +76,66 @@
 		    </ul>
 		  </div>
 		</nav>
+		<div id="log"></div>
 		<div class="container rounded-lg" style="background-color: #efefef;width: 70%;height: 100%;padding:5%" id="content">
 			<div style="padding-left:25%;padding-right: 25%;padding-top:5%;padding-bottom:5%">
 				<form onsubmit="return loginF()" name="login">
-		           <div class="form-group">
+					<div class="form-group">
 		           	 	<label for="exampleInputEmail1">Correo Electrónico</label>
 		    			<input type="email" name="user" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="ejemplo@correo.com" required/>
-		 		   </div>
-		           <div class="form-group">
+		    		</div>
+		    		<div class="form-group">
 		    			<label for="exampleInputPassword1">Contraseña</label>
 		   			    <input type="password" name="pass" class="form-control" id="exampleInputPassword1" placeholder="Contraseña" required/>
-		 		   </div>
-		 		   <p id="aviso" class="text-success" style="width:320px;border-radius: 5px;"></p>
-		           <div class="form-group form-check">
+		   			</div>
+		   			<p id="aviso" class="text-success" style="width:320px;border-radius: 5px;"></p>
+		   			<div class="form-group form-check">
 		   			    <input type="checkbox" class="form-check-input" id="exampleCheck1">
 		   			    <label class="form-check-label" for="exampleCheck1">Mantenerse conectado</label>
-		           </div>
+		   			</div>
 		           	<div align="center" id="loading">
 
 			           	<div class="spinner-border" role="status" style="color:#00c0b7">
 			           		<span class="sr-only">Loading...</span>
 			           	</div>
 			           	<p style="color:#00c0b7"><small>comprobando sesión</small></p>
-		           	<div>
-		           	</div>	
-		           </div>
-		           
+		           	</div>
 		           <button type="submit" class="btn btn-primary">Entrar</button>
 				</form>
 			</div>
 		</div>
-
+		<div class="modal" tabindex="-1" id="evento" role="dialog">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<div class="modal-header" style="display: block">
+						<div class="row">
+							<div class="col">
+								<h5 class="modal-title" id="tituloEvento">Modal title</h5>		
+							</div>
+							<div class="col">
+								<button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+									<span aria-hidden="true">&times;</span>
+								</button>
+							</div>
+							
+						</div>
+						<div class="row">
+								<div class="col">
+									<h6 class="modal-title" id="fechaEvento"></h6>
+								</div>
+							</div>
+					</div>
+					<div class="modal-body">
+						<h6 id="tematica"></h6>
+						<p id="descripcionEvento">Modal body text goes here.</p>
+						<h6 id="organiza" align="center"></h6>
+						
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+					</div>
+				</div>
+			</div>
+		</div>
 	</body>
 </html>
