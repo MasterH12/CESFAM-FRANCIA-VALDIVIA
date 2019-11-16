@@ -33,6 +33,117 @@ async function inicializar(){
 	    
 	});
 }
+async function inicializarRegistro(){
+	// Your web app's Firebase configuration
+	const firebaseConfig = {
+	  	apiKey: "AIzaSyAmTGCzHl7-SxeNf8q81Nt01n67vjqfv0U",
+	  	authDomain: "cesfam-francia.firebaseapp.com",
+	  	databaseURL: "https://cesfam-francia.firebaseio.com",
+	    projectId: "cesfam-francia",
+	    storageBucket: "cesfam-francia.appspot.com",
+	    messagingSenderId: "1098474308171",
+	    appId: "1:1098474308171:web:ce3d547564502df8f3c3ce"
+	};
+	// Initialize Firebase
+	await firebase.initializeApp(firebaseConfig);
+}
+function trim(x) {
+    return x.replace(/^\s+|\s+$/gm,'');
+}
+function validateForm(){
+	//limpieza de feedback
+	var fN = document.getElementById("feedbackNombre");
+	var fA = document.getElementById("feedbackApellidos");
+	var fU = document.getElementById("feedbackUser");
+	var fC = document.getElementById("feedbackCorreo");
+	var fE = document.getElementById("feedbackEspecialidad");
+	var fP = document.getElementById("feedbackContraseña");
+	var fCP = document.getElementById("feedbackCContraseña");
+
+	fN.innerHTML = "";
+	fA.innerHTML = "";
+	fU.innerHTML = "";
+	fC.innerHTML = "";
+	fE.innerHTML = "";
+	fP.innerHTML = "";
+	fCP.innerHTML = "";
+
+	//Obtención de datos del formulario
+	var n = document.forms["register"]["nombre"].value.toString();
+	var a = document.forms["register"]["apellidos"].value.toString();
+	var u = document.forms["register"]["user"].value.toString();
+	var c = document.forms["register"]["correo"].value.toString();
+	var e = document.forms["register"]["especialidad"].value.toString();
+	var p = document.forms["register"]["contraseña"].value.toString();
+	var cP = document.forms["register"]["cContraseña"].value.toString();
+
+	//Verificación de llenado
+	var paso = true;
+	if(n==""){
+		fN.innerHTML = "<div class='invalid-feedback'>No ha ingresado nombre</div>";
+		paso=false;
+	}else{
+		fN.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+
+	if(a==""){
+		fA.innerHTML = "<div class='invalid-feedback'>No ha ingresado apellidos</div>";
+		paso=false;
+	}else{
+		fA.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+
+	if(u==""){
+		fU.innerHTML = "<div class='invalid-feedback'>No ha ingresado usuario</div>";
+		paso=false;
+	}else{
+		fU.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+
+	if(c==""){
+		fC.innerHTML = "<div class='invalid-feedback'>No ha ingresado correo</div>";
+		paso=false;
+	}else if(c.indexOf("@")==-1 || c.indexOf("@")==0){
+		fC.innerHTML = "<div class='invalid-feedback'>dirección de correo inválida</div>";
+		paso=false;
+	}else{
+		fC.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+
+	if(e==""){
+		fE.innerHTML = "<div class='invalid-feedback'>No ha ingresado especialidad</div>";
+		paso=false;
+	}else{
+		fE.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+
+	if(p==""){
+		fP.innerHTML = "<div class='invalid-feedback'>No ha ingresado contraseña</div>";
+		paso=false;
+	}else{
+		fP.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+
+	if(cP==""){
+		fCP.innerHTML = "<div class='invalid-feedback'>No ha ingresado contraseña</div>";
+		paso=false;
+	}else{
+		fCP.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+	if(paso==false){
+		return false;
+	}
+	document.getElementById("loadingForm").innerHTML = "<div class='spinner-border' role='status' style='color:#00c0b7'><span class='sr-only'>Loading...</span></div><p style='color:#00c0b7'><small>registrando usuario</small></p>";
+	$('#registro').modal('show');
+	document.getElementById("mNombres").innerHTML = "Nombre(s): " + n;
+	document.getElementById("mApellidos").innerHTML = "Apellido(s): " + a;
+	document.getElementById("mUser").innerHTML = "Nombre de Usuario: " + u;
+	document.getElementById("mCorreo").innerHTML = "Correo electrónico: " + c;
+	document.getElementById("mEspecialidad").innerHTML = "Especialidad: " + e;
+
+	var db = firebase.firestore();
+	return false;
+}
 
 function loginF(){
 	document.getElementById("loading").innerHTML = "<div class='spinner-border' role='status' style='color:#00c0b7'><span class='sr-only'>Loading...</span></div><p style='color:#00c0b7'><small>iniciando sesión</small></p>";
