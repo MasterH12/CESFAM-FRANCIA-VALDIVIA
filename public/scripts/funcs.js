@@ -68,9 +68,9 @@ function validateForm(){
 	fP.innerHTML = "";
 	fCP.innerHTML = "";
 
-	//Obtención de datos del formulario
-	var n = document.forms["register"]["nombre"].value.toString();
-	var a = document.forms["register"]["apellidos"].value.toString();
+	//Obtención 8de datos del formulario
+	var n = trim(document.forms["register"]["nombre"].value.toString());
+	var a = trim(document.forms["register"]["apellidos"].value.toString());
 	var u = document.forms["register"]["user"].value.toString();
 	var c = document.forms["register"]["correo"].value.toString();
 	var e = document.forms["register"]["especialidad"].value.toString();
@@ -131,8 +131,19 @@ function validateForm(){
 		fCP.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
 	}
 	if(paso==false){
+		document.getElementById("loadingForm").innerHTML = "";
 		return false;
 	}
+
+	paso = comprobarCorreo(c, "b");
+    if(paso==false){
+    	fC.innerHTML = "<div class='invalid-feedback'>Dirección de correo en uso</div>";
+    	document.getElementById("loadingForm").innerHTML = "";
+		return false;
+	}else{
+		fC.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+	}
+
 	document.getElementById("loadingForm").innerHTML = "<div class='spinner-border' role='status' style='color:#00c0b7'><span class='sr-only'>Loading...</span></div><p style='color:#00c0b7'><small>registrando usuario</small></p>";
 	$('#registro').modal('show');
 	document.getElementById("mNombres").innerHTML = "Nombre(s): " + n;
@@ -140,8 +151,69 @@ function validateForm(){
 	document.getElementById("mUser").innerHTML = "Nombre de Usuario: " + u;
 	document.getElementById("mCorreo").innerHTML = "Correo electrónico: " + c;
 	document.getElementById("mEspecialidad").innerHTML = "Especialidad: " + e;
+	return false;
+}
+async function comprobarCorreo(c, cecosf){
+	paso=true;
+	await db.collection("Usuarios").where("cecosf","==",cecosf).get()
+        .then(function(querySnapshot) {
+	            // doc.data() is never undefined for query doc snapshots
+            var tam=querySnapshot.size;
+            var i = 0;
+            while(c!=querySnapshot.docs[i].data().correo || i < tam){
+            	i++;
+            }
+            if(i!=tam){
+            	paso=false;
+            }
+        });
+    return paso;
+}
+async function agregarUsuario(){
+	var n = document.forms["register"]["nombre"].value.toString();
+	var a = document.forms["register"]["apellidos"].value.toString();
+	var u = document.forms["register"]["user"].value.toString();
+	var c = document.forms["register"]["correo"].value.toString();
+	var e = document.forms["register"]["especialidad"].value.toString();
+	var p = document.forms["register"]["contraseña"].value.toString();
 
-	var db = firebase.firestore();
+	var validado = true;
+    await firebase.auth().createUserWithEmailAndPassword(c, p).catch(function(error) {
+      // Handle Errors here.
+      var errorCode = error.code;
+      var errorMessage = error.message;
+      validado = false;
+      // Si no se logra el registro por un error de Firebase, se muestra en el campo correspondiente al error:
+      if(error.code=="auth/weak-password"){
+        document.getElementById("contraseña").innerHTML= "<div class='invalid-feedback'>Contraseña debe tener más de 6 caracteres</div>";
+        document.getElementById("loadingForm").innerHTML = "";
+      }
+      if(error.code=="auth/email-already-in-use"){
+        document.getElementById("correo").innerHTML= "<div class='invalid-feedback'>Correo ya en uso</div>";
+        document.getElementById("loadingForm").innerHTML = "";
+      }
+      //EN CASO INVESTIGACIÓN FUTURA SOBRE OTROS ERRORES USAR:
+      //aviso.innerHTML=errorCode;
+    }).then(async function(){
+    	await firebase.auth().signInWithEmailAndPassword(c, p).catch(function(error) {
+        var errorCode = error.code;
+        var errorMessage = error.message;
+        validado = false;
+    }).then( async function(user){
+        await firebase.firestore().collection("Usuarios").add({
+            correo: m,
+            cecosf: "b",
+            cargo: false,
+            especialidad: e,
+            mostrar: true,
+            nombre: n,
+            apellidos: a
+            });
+    });
+    return validado;
+}
+function registrarUsuario(){
+	agregarUsuario();
 	return false;
 }
 
@@ -185,7 +257,7 @@ function sacar(){
     window.location.href="login.html";
 }
 
-async function despliegue(u, pag){
+async function despliegue(){
 	document.getElementById("content").innerHTML="<div id='informacion'></div>";
 	var usuario = new Usuario();
 	await usuario.obtenerUsuario(u.email);
@@ -274,7 +346,23 @@ class Usuario{
 		str = str + "</div>";
 		return str;
 	}
-	desplegarCalendario(){
+	async desplegarCalendario(){
+		var fecha = Date.now();
+		fecha = fecha - 2592000000;
+		var eventos = [];
+		await db.collection("Eventos").where("cecosf","==",this.user.cecosf).where("fecha",>=,fecha).get()
+        .then(function(querySnapshot) {
+	            // doc.data() is never undefined for query doc snapshots
+            querySnapshot.forEach(function(doc) {
+            	evento.push({
+            		title: doc.data().nombre,
+            		start: doc.data().fecha,
+            		description: doc.data().desc,
+            		organiza: doc.data().cecosf,
+            		tematica: doc.data().tipo
+            	});
+            });
+        });
 		if(this.user.admin){
 			var calendarEl = document.getElementById('calendar');
 
