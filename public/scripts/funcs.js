@@ -195,21 +195,22 @@ async function agregarUsuario(){
       //EN CASO INVESTIGACIÓN FUTURA SOBRE OTROS ERRORES USAR:
       //aviso.innerHTML=errorCode;
     }).then(async function(){
-    	await firebase.auth().signInWithEmailAndPassword(c, p).catch(function(error) {
-        var errorCode = error.code;
-        var errorMessage = error.message;
-        validado = false;
-    }).then( async function(user){
-        await firebase.firestore().collection("Usuarios").add({
-            correo: m,
-            cecosf: "b",
-            cargo: false,
-            especialidad: e,
-            mostrar: true,
-            nombre: n,
-            apellidos: a
-            });
-    });
+	    	await firebase.auth().signInWithEmailAndPassword(c, p).catch(function(error) {
+	        var errorCode = error.code;
+	        var errorMessage = error.message;
+	        validado = false;
+	    }).then( async function(user){
+	        await firebase.firestore().collection("Usuarios").add({
+	            correo: m,
+	            cecosf: "b",
+	            cargo: false,
+	            especialidad: e,
+	            mostrar: true,
+	            nombre: n,
+	            apellidos: a
+	            });
+	    });
+	});
     return validado;
 }
 function registrarUsuario(){
@@ -244,7 +245,9 @@ function loginF(){
             firebase.auth().onAuthStateChanged(function(user) {
                 if (user) {
                     aviso.innerHTML="¡sesión iniciada!";
-                    setTimeout("despliegue()", 1000);
+                    setTimeout(function(){
+			    		despliegue(firebase.auth().currentUser,"intranet");
+			    	}, 1000);
                     document.getElementById("loading").innerHTML ="";
                 }
             });
@@ -257,11 +260,15 @@ function sacar(){
     window.location.href="login.html";
 }
 
-async function despliegue(){
+async function despliegue(u, pagina){
 	document.getElementById("content").innerHTML="<div id='informacion'></div>";
 	var usuario = new Usuario();
 	await usuario.obtenerUsuario(u.email);
-	document.getElementById("informacion").innerHTML = "<button type='button' class='btn btn-outline-primary' style='float:right;' onClick='logOut()'>Log Out</button>" + usuario.desplegarUsuario() + "<div id='calendar'></div>";
+	var str = "<button type='button' class='btn btn-outline-primary' style='float:right;' onClick='logOut()'>Log Out</button>" + usuario.desplegarUsuario() + "<div id='calendar'></div>";
+	if(usuario.cargo){
+		str = str + "<div id='users'></div>";
+	}
+	document.getElementById("informacion").innerHTML = str;
 	usuario.desplegarCalendario();
 }
 
@@ -307,6 +314,14 @@ function desplegarLogin(){
 	str = str + "</div>";
 	return str;
 }
+/*	constructor(nombre, fecha, desc, cecosf, tipo){
+		title: doc.data().nombre,
+		start: doc.data().fecha,
+		description: doc.data().desc,
+		organiza: doc.data().cecosf,
+		tematica: doc.data().tipo
+	}
+}*/
 class Usuario{
 	constructor(){
 		this.user;
@@ -350,25 +365,45 @@ class Usuario{
 		var fecha = Date.now();
 		fecha = fecha - 2592000000;
 		var eventos = [];
-		await db.collection("Eventos").where("cecosf","==",this.user.cecosf).where("fecha",>=,fecha).get()
+		await firebase.firestore().collection("Eventos").where("cecosf","==",this.user.cecosf).where("fecha",">=",fecha).get()
         .then(function(querySnapshot) {
+
 	            // doc.data() is never undefined for query doc snapshots
             querySnapshot.forEach(function(doc) {
-            	evento.push({
-            		title: doc.data().nombre,
-            		start: doc.data().fecha,
-            		description: doc.data().desc,
-            		organiza: doc.data().cecosf,
-            		tematica: doc.data().tipo
+            	eventos.push({
+            		"title": doc.data().nombre,
+            		"start": doc.data().fecha,
+            		"description": doc.data().desc,
+            		"organiza": doc.data().cecosf,
+            		"tematica": doc.data().tipo,
+            		"id":doc.id,
+            		"nat":"evento"
             	});
             });
         });
+        await firebase.firestore().collection("Reuniones").where("cecosf","==",this.user.cecosf).where("fecha",">=",fecha).get()
+        .then(function(querySnapshot) {
+
+	            // doc.data() is never undefined for query doc snapshots
+            querySnapshot.forEach(function(doc) {
+            	eventos.push({
+            		"title": doc.data().nombre,
+            		"start": doc.data().fecha,
+            		"description": doc.data().desc,
+            		"organiza": doc.data().cecosf,
+            		"tematica": doc.data().tipo,
+            		"id":doc.id,
+            		"nat":"reunion"
+            	});
+            });
+        });
+		document.getElementById("log").innerHTML = eventos[1];
+        
 		if(this.user.admin){
 			var calendarEl = document.getElementById('calendar');
 
 	        var calendar = new FullCalendar.Calendar(calendarEl, {
 	          plugins: [ 'interaction', 'dayGrid' ],
-	          defaultDate: '2019-08-12',
 	          locale:'es',
 	          navLinks: false, // can click day/week names to navigate views
 
@@ -376,69 +411,17 @@ class Usuario{
 		      editable:true,
 		      // CUANDO SE PUEDA EDITAR, GUARDAR EL DOC_ID DE CADA EVENTO, PARA QUE CUANDO SEAN MODIFICADOS, PUEDAN SER GUARDADOS EN SUS DOC_ID'S CORRESPONDIENTES
 		      eventLimit: true,
-	          events: [
-		        {
-		          title: 'Business Lunch',
-		          start: '2019-08-03T13:00:00',
-		          constraint: 'businessHours'
-		        },
-		        {
-		          title: 'Meeting',
-		          start: '2019-08-13T11:00:00',
-		          constraint: 'availableForMeeting', // defined below
-		          color: '#257e4a',
-		          description: 'Reunión de avances',
-		          organiza: 'a',
-		          tematica: 'psicología',
-		        },
-		        {
-		          title: 'Conference',
-		          start: '2019-08-18',
-		          end: '2019-08-20'
-		        },
-		        {
-		          title: 'Party',
-		          start: '2019-08-29T20:00:00'
-		        },
-
-		        // areas where "Meeting" must be dropped
-		        {
-		          groupId: 'availableForMeeting',
-		          start: '2019-08-11T10:00:00',
-		          end: '2019-08-11T16:00:00',
-		          rendering: 'background'
-		        },
-		        {
-		          groupId: 'availableForMeeting',
-		          start: '2019-08-13T10:00:00',
-		          end: '2019-08-13T16:00:00',
-		          rendering: 'background'
-		        },
-
-		        // red areas where no events can be dropped
-		        {
-		          start: '2019-08-24',
-		          end: '2019-08-28',
-		          overlap: false,
-		          rendering: 'background',
-		          color: '#ff9f89'
-		        },
-		        {
-		          start: '2019-08-06',
-		          end: '2019-08-08',
-		          overlap: false,
-		          rendering: 'background',
-		          color: '#ff9f89'
-		        }
-		      ],
+	          events: eventos,
 		      eventClick: function(info) {
 		        $('#evento').modal('show');
 		        var evento = new Object();
 		        evento.titulo = info.event.title;
-		        evento.fecha = info.event.start.toLocaleDateString();
+		        evento.fecha = info.event.start;
 		        evento.tematica = info.event.extendedProps.tematica;
 		        evento.descripcion = info.event.extendedProps.description;
-		        evento.organiza = establecimiento(info.event.extendedProps.organiza)
+		        evento.organiza = establecimiento(info.event.extendedProps.organiza);
+		        evento.id = info.event.extendedProps.id;
+		        evento.nat = info.event.extendedProps.nat;
 		        document.getElementById("evento").innerHTML = desplegarEvento(evento);
 		      }
 	        });
@@ -533,6 +516,9 @@ class Usuario{
         calendar.render();
 	}
 }
+function desplegarUsuarios(){
+
+}
 function establecimiento(palabra){
 	switch (palabra){
 		case 'a':
@@ -560,12 +546,13 @@ function desplegarEvento(evento){
 	str = str + "<h5 class='modal-title' id='tituloEvento'>" + evento.titulo + "</h5>";
 	str = str + "</div>";
 	str = str + "<div class='col' align='right'>";
-	str = str + "<button type='button' class='btn btn-outline-danger'>Eliminar</button>";
+	str = str + "<button type='button' class='btn btn-outline-danger' onclick='eliminarEvento(" + evento.id + ")'>Eliminar</button>";
 	str = str + "</div>";
 	str = str + "</div>";
 	str = str + "<div class='row'>";
-	str = str + "<div class='col'>";			
-	str = str + "<h6 class='modal-title' id='fechaEvento'>" + evento.fecha + "</h6>";				
+	str = str + "<div class='col'>";
+	var iMins = evento.fecha.getMinutes();	
+	str = str + "<h6 class='modal-title' id='fechaEvento'>" + evento.fecha.toLocaleDateString() + " " + evento.fecha.getHours() + ":" + ((iMins>9)?iMins:"0"+iMins) + "</h6>";				
 	str = str + "</div>";
 	str = str + "</div>";
 	str = str + "</div>";
@@ -580,4 +567,7 @@ function desplegarEvento(evento){
 	str = str + "</div>";
 	str = str + "</div>";
 	return str;
+}
+function eliminarEvento(id){
+	db.collection("Eventos").doc(id).delete()
 }
