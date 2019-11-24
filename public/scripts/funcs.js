@@ -1,4 +1,5 @@
 //<script src="https://www.gstatic.com/firebasejs/7.2.2/firebase-app.js"></script>
+var usuarioLogeado;
 async function inicializar(){
 	// Your web app's Firebase configuration
 	const firebaseConfig = {
@@ -262,14 +263,13 @@ function sacar(){
 
 async function despliegue(u, pagina){
 	document.getElementById("content").innerHTML="<div id='informacion'></div>";
-	var usuario = new Usuario();
-	await usuario.obtenerUsuario(u.email);
-	var str = "<button type='button' class='btn btn-outline-primary' style='float:right;' onClick='logOut()'>Log Out</button>" + usuario.desplegarUsuario() + "<div id='calendar'></div>";
-	if(usuario.cargo){
+	await obtenerUsuario(u.email);
+	var str = "<button type='button' class='btn btn-outline-primary' style='float:right;' onClick='logOut()'>Log Out</button>" + window.usuarioLogeado.desplegarUsuario() + "<div id='calendar'></div>";
+	if(window.usuarioLogeado.cargo){
 		str = str + "<div id='users'></div>";
 	}
 	document.getElementById("informacion").innerHTML = str;
-	usuario.desplegarCalendario();
+	window.usuarioLogeado.desplegarCalendario();
 }
 
 async function logOut(){
@@ -322,40 +322,42 @@ function desplegarLogin(){
 		tematica: doc.data().tipo
 	}
 }*/
-class Usuario{
-	constructor(){
-		this.user;
-		this.especialidades;
-		this.eventos;
-		this.reuniones;
+async function obtenerUsuario(email){
+	var usuario= new Object();
+	usuario.correo = email;
+	await firebase.firestore().collection("Usuarios").where("correo","==",email).get()
+	.then(function(querySnapshot) {
+		const data = querySnapshot.docs[0].data();
+		usuario.admin = data.cargo;
+		usuario.cecosf = data.cecosf;
+		usuario.especialidad = data.especialidad;
+		usuario.nombre = data.nombre;
+	});
+	if (usuario.admin){
+		window.usuarioLogeado = new Administrador(usuario.nombre, usuario.cecosf, usuario.especialidad, email);
+	}else{
+		window.usuarioLogeado = new Usuario(usuario.nombre, usuario.cecosf, usuario.especialidad, email);
 	}
-	async obtenerUsuario(email){
-		var usuario= new Object();
-		usuario.correo = email;
-		await firebase.firestore().collection("Usuarios").where("correo","==",email).get()
-		.then(function(querySnapshot) {
-			const data = querySnapshot.docs[0].data();
-			usuario.admin = data.cargo;
-			usuario.cecosf = data.cecosf;
-			usuario.especialidad = data.especialidad;
-			usuario.nombre = data.nombre;
-		});
-		this.user = usuario;
-
+}
+class Usuario{
+	constructor(nombre, cecosf, especialidad, correo){
+		this.nombre = nombre;
+		this.cecosf = cecosf;
+		this.especialidad = especialidad;
+		this.correo = correo;
+		this.especialidades;
+		this.calendar;
 	}
 	desplegarUsuario(){
 		var str = "<div class='row'>";
 		str = str + "<div class='col'>";
-		str = str + "Nombre: " + this.user.nombre;
+		str = str + "Nombre: " + this.nombre;
 		str = str + "<br>";
-		str = str + "Establecimiento: " + establecimiento(this.user.cecosf);		
+		str = str + "Establecimiento: " + establecimiento(this.cecosf);		
 		str = str + "<br>";
-		str = str + "Especialidad: " + this.user.especialidad;
+		str = str + "Especialidad: " + this.especialidad;
 		str = str + "<br>";
-		str = str + "Correo: " + this.user.correo;
-		if(this.user.admin){
-			str = str + "<h4 style='color:#00c0b7'>Permisos de administrador concedidos<h4>";	
-		}
+		str = str + "Correo: " + this.correo;
 		str = str + "<br>";
 		str = str + "</div>";
 		str = str + "</div>";
@@ -365,7 +367,121 @@ class Usuario{
 		var fecha = Date.now();
 		fecha = fecha - 2592000000;
 		var eventos = [];
-		await firebase.firestore().collection("Eventos").where("cecosf","==",this.user.cecosf).where("fecha",">=",fecha).get()
+		//OBTENCION DE EVENTOS
+		await firebase.firestore().collection("Eventos").where("cecosf","==",this.cecosf).where("fecha",">=",fecha).get()
+        .then(function(querySnapshot) {
+
+	            // doc.data() is never undefined for query doc snapshots
+            querySnapshot.forEach(function(doc) {
+            	eventos.push({
+            		"title": doc.data().nombre,
+            		"start": doc.data().fecha,
+            		"description": doc.data().desc,
+            		"organiza": doc.data().cecosf,
+            		"tematica": doc.data().tipo,
+            		//EL ATRIBUTO NAT, INDICA SI ES UN EVENTO O UNA REUNION
+            		"nat":"evento"
+            	});
+            });
+        });
+        //OBTENCION DE REUNIONES
+        await firebase.firestore().collection("Reuniones").where("cecosf","==",this.cecosf).where("fecha",">=",fecha).get()
+        .then(function(querySnapshot) {
+
+	            // doc.data() is never undefined for query doc snapshots
+            querySnapshot.forEach(function(doc) {
+            	eventos.push({
+            		"title": doc.data().nombre,
+            		"start": doc.data().fecha,
+            		"description": doc.data().desc,
+            		"organiza": doc.data().cecosf,
+            		"tematica": doc.data().tipo,
+            		//EL ATRIBUTO NAT, INDICA SI ES UN EVENTO O UNA REUNION
+            		"nat":"reunion"
+            	});
+            });
+        });
+
+		this.calendar = new FullCalendar.Calendar(calendarEl, {
+          	plugins: [ 'dayGrid' ],
+	        locale:'es',
+	        navLinks: false, // can click day/week names to navigate views
+
+		    weekNumberCalculation: 'ISO',
+		    // CUANDO SE PUEDA EDITAR, GUARDAR EL DOC_ID DE CADA EVENTO, PARA QUE CUANDO SEAN MODIFICADOS, PUEDAN SER GUARDADOS EN SUS DOC_ID'S CORRESPONDIENTES
+		    eventLimit: true,
+	        events: eventos,
+		    eventClick: function(info) {
+		        $('#evento').modal('show');
+		        var evento = new Object();
+		        evento.titulo = info.event.title;
+		        evento.fecha = info.event.start;
+		        evento.tematica = info.event.extendedProps.tematica;
+		        evento.descripcion = info.event.extendedProps.description;
+		        evento.organiza = establecimiento(info.event.extendedProps.organiza);
+		        evento.id = info.event.extendedProps.id;
+		        evento.nat = info.event.extendedProps.nat;
+		        document.getElementById("evento").innerHTML = desplegarEvento(info.event);
+		    }
+        });
+
+        this.calendar.render();
+	}
+	desplegarEvento(evento){
+		var str = "<div class='modal-dialog' role='document'>";
+		str = str + "<div class='modal-content'>";
+		str = str + "<div class='modal-header' style='display: block'>";
+		str = str + "<div class='row'>";
+		str = str + "<div class='col'>";
+		str = str + "<h5 class='modal-title' id='tituloEvento'>" + evento.title + "</h5>";
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "<div class='row'>";
+		str = str + "<div class='col'>";
+		var iMins = evento.start.getMinutes();	
+		str = str + "<h6 class='modal-title' id='fechaEvento'>" + evento.start.toLocaleDateString() + " " + evento.start.getHours() + ":" + ((iMins>9)?iMins:"0"+iMins) + "</h6>";				
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "<div class='modal-body'>";
+		str = str + "<h6 id='tematica'>" + evento.extendedProps.tematica + "</h6>";		
+		str = str + "<p id='descripcionEvento'>" + evento.extendedProps.description + "</p>";
+		str = str + "<h6 id='organiza' align='center'>" + establecimiento(evento.extendedProps.organiza) + "</h6>";
+		str = str + "</div>";
+		str = str + "<div class='modal-footer'>";
+		str = str + "<button type='button' class='btn btn-secondary' data-dismiss='modal'>Cerrar</button>";
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "</div>";
+		return str;
+	}
+}
+class Administrador extends Usuario{
+	constructor(nombre, cecosf, especialidad, correo){
+		super(nombre, cecosf, especialidad, correo);
+	}
+	desplegarUsuario(){
+		var str = "<div class='row'>";
+		str = str + "<div class='col'>";
+		str = str + "Nombre: " + this.nombre;
+		str = str + "<br>";
+		str = str + "Establecimiento: " + establecimiento(this.cecosf);		
+		str = str + "<br>";
+		str = str + "Especialidad: " + this.especialidad;
+		str = str + "<br>";
+		str = str + "Correo: " + this.correo;
+		str = str + "<h4 style='color:#00c0b7'>Permisos de administrador concedidos<h4>";
+		str = str + "<br>";
+		str = str + "</div>";
+		str = str + "</div>";
+		return str;
+	}
+	async desplegarCalendario(){
+		var fecha = Date.now();
+		fecha = fecha - 2592000000;
+		var eventos = [];
+		//OBTENCIÓN DE EVENTOS
+		await firebase.firestore().collection("Eventos").where("cecosf","==",this.cecosf).where("fecha",">=",fecha).get()
         .then(function(querySnapshot) {
 
 	            // doc.data() is never undefined for query doc snapshots
@@ -381,7 +497,8 @@ class Usuario{
             	});
             });
         });
-        await firebase.firestore().collection("Reuniones").where("cecosf","==",this.user.cecosf).where("fecha",">=",fecha).get()
+        //OBTENCIÓN DE REUNIONES
+        await firebase.firestore().collection("Reuniones").where("cecosf","==",this.cecosf).where("fecha",">=",fecha).get()
         .then(function(querySnapshot) {
 
 	            // doc.data() is never undefined for query doc snapshots
@@ -397,22 +514,20 @@ class Usuario{
             	});
             });
         });
-		document.getElementById("log").innerHTML = eventos[1];
-        
-		if(this.user.admin){
-			var calendarEl = document.getElementById('calendar');
+        //DESPLIEGUE DE CALENDARIO
+        var calendarEl = document.getElementById('calendar');
 
-	        var calendar = new FullCalendar.Calendar(calendarEl, {
-	          plugins: [ 'interaction', 'dayGrid' ],
-	          locale:'es',
-	          navLinks: false, // can click day/week names to navigate views
+        this.calendar = new FullCalendar.Calendar(calendarEl, {
+          	plugins: [ 'interaction', 'dayGrid' ],
+	        locale:'es',
+	        navLinks: false, // can click day/week names to navigate views
 
-		      weekNumberCalculation: 'ISO',
-		      editable:true,
-		      // CUANDO SE PUEDA EDITAR, GUARDAR EL DOC_ID DE CADA EVENTO, PARA QUE CUANDO SEAN MODIFICADOS, PUEDAN SER GUARDADOS EN SUS DOC_ID'S CORRESPONDIENTES
-		      eventLimit: true,
-	          events: eventos,
-		      eventClick: function(info) {
+		    weekNumberCalculation: 'ISO',
+		    editable:true,
+		    // CUANDO SE PUEDA EDITAR, GUARDAR EL DOC_ID DE CADA EVENTO, PARA QUE CUANDO SEAN MODIFICADOS, PUEDAN SER GUARDADOS EN SUS DOC_ID'S CORRESPONDIENTES
+		    eventLimit: true,
+	        events: eventos,
+		    eventClick: function(info) {
 		        $('#evento').modal('show');
 		        var evento = new Object();
 		        evento.titulo = info.event.title;
@@ -422,102 +537,47 @@ class Usuario{
 		        evento.organiza = establecimiento(info.event.extendedProps.organiza);
 		        evento.id = info.event.extendedProps.id;
 		        evento.nat = info.event.extendedProps.nat;
-		        document.getElementById("evento").innerHTML = desplegarEvento(evento);
-		      }
-	        });
-		} else{
-			var calendarEl = document.getElementById('calendar');
+		        document.getElementById("evento").innerHTML = window.usuarioLogeado.desplegarEvento(info.event);
+		    }
+        });
 
-	        var calendar = new FullCalendar.Calendar(calendarEl, {
-	          plugins: ['dayGrid' ],
-	          defaultDate: '2019-08-12',
-	          locale:'es',
-	          navLinks: false, // can click day/week names to navigate views
-
-		      weekNumberCalculation: 'ISO',
-		      editable:true,
-		      // CUANDO SE PUEDA EDITAR, GUARDAR EL DOC_ID DE CADA EVENTO, PARA QUE CUANDO SEAN MODIFICADOS, PUEDAN SER GUARDADOS EN SUS DOC_ID'S CORRESPONDIENTES
-		      eventLimit: true,
-	          events: [
-		        {
-		          title: 'Business Lunch',
-		          start: '2019-08-03T13:00:00',
-		          constraint: 'businessHours'
-		        },
-		        {
-		          title: 'Meeting',
-		          start: '2019-08-13T11:00:00',
-		          constraint: 'availableForMeeting', // defined below
-		          color: '#257e4a',
-		          description: 'Reunión de avances',
-		          organiza: 'a',
-		          tematica: 'psicología',
-		        },
-		        {
-		          title: 'Conference',
-		          start: '2019-08-18',
-		          end: '2019-08-20'
-		        },
-		        {
-		          title: 'Party',
-		          start: '2019-08-29T20:00:00'
-		        },
-
-		        // areas where "Meeting" must be dropped
-		        {
-		          groupId: 'availableForMeeting',
-		          start: '2019-08-11T10:00:00',
-		          end: '2019-08-11T16:00:00',
-		          rendering: 'background'
-		        },
-		        {
-		          groupId: 'availableForMeeting',
-		          start: '2019-08-13T10:00:00',
-		          end: '2019-08-13T16:00:00',
-		          rendering: 'background'
-		        },
-
-		        // red areas where no events can be dropped
-		        {
-		          start: '2019-08-24',
-		          end: '2019-08-28',
-		          overlap: false,
-		          rendering: 'background',
-		          color: '#ff9f89'
-		        },
-		        {
-		          start: '2019-08-06',
-		          end: '2019-08-08',
-		          overlap: false,
-		          rendering: 'background',
-		          color: '#ff9f89'
-		        }
-		      ],
-		      eventClick: function(info) {
-		        $('#evento').modal('show');
-		        
-		        var evento = new Object();
-		        evento.titulo = info.event.title;
-		        evento.fecha = info.event.start.toLocaleDateString();
-		        evento.tematica = info.event.extendedProps.tematica;
-		        evento.descripcion = info.event.extendedProps.description;
-		        evento.organiza = establecimiento(info.event.extendedProps.organiza)
-
-		        document.getElementById("tituloEvento").innerHTML = evento.titulo;
-		        document.getElementById("fechaEvento").innerHTML = evento.fecha;
-		        document.getElementById("tematica").innerHTML = evento.tematica;
-		        document.getElementById("descripcionEvento").innerHTML = evento.descripcion;
-		        document.getElementById("organiza").innerHTML = evento.organiza;
-		      }
-	        });
-		}
-        
-
-        calendar.render();
+        this.calendar.render();
+    }
+    desplegarEvento(evento){
+		var str = "<div class='modal-dialog' role='document'>";
+		str = str + "<div class='modal-content'>";
+		str = str + "<div class='modal-header' style='display: block'>";
+		str = str + "<div class='row'>";
+		str = str + "<div class='col'>";
+		str = str + "<h5 class='modal-title' id='tituloEvento'>" + evento.title + "</h5>";
+		str = str + "</div>";
+		str = str + "<div class='col' align='right'>";
+		str = str + "<button type='button' class='btn btn-outline-danger' data-dismiss='modal' onclick=\"window.usuarioLogeado.eliminarEvento('" + evento.id + "')\">Eliminar</button>";
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "<div class='row'>";
+		str = str + "<div class='col'>";
+		var iMins = evento.start.getMinutes();	
+		str = str + "<h6 class='modal-title' id='fechaEvento'>" + evento.start.toLocaleDateString() + " " + evento.start.getHours() + ":" + ((iMins>9)?iMins:"0"+iMins) + "</h6>";				
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "<div class='modal-body'>";
+		str = str + "<h6 id='tematica'>" + evento.extendedProps.tematica + "</h6>";		
+		str = str + "<p id='descripcionEvento'>" + evento.extendedProps.description + "</p>";
+		str = str + "<h6 id='organiza' align='center'>" + establecimiento(evento.extendedProps.organiza) + "</h6>";
+		str = str + "</div>";
+		str = str + "<div class='modal-footer'>";
+		str = str + "<button type='button' class='btn btn-secondary' data-dismiss='modal'>Cerrar</button>";
+		str = str + "</div>";
+		str = str + "</div>";
+		str = str + "</div>";
+		return str;
 	}
-}
-function desplegarUsuarios(){
-
+	async eliminarEvento(eventId){
+		await firebase.firestore().collection("Eventos").doc(eventId).delete();
+		this.calendar.getEventById(eventId).remove();
+	}
 }
 function establecimiento(palabra){
 	switch (palabra){
@@ -536,38 +596,4 @@ function establecimiento(palabra){
 		case 'g':
 			return "CECOSF Arauco 810";
 	}
-}
-function desplegarEvento(evento){
-	var str = "<div class='modal-dialog' role='document'>";
-	str = str + "<div class='modal-content'>";
-	str = str + "<div class='modal-header' style='display: block'>";
-	str = str + "<div class='row'>";
-	str = str + "<div class='col'>";
-	str = str + "<h5 class='modal-title' id='tituloEvento'>" + evento.titulo + "</h5>";
-	str = str + "</div>";
-	str = str + "<div class='col' align='right'>";
-	str = str + "<button type='button' class='btn btn-outline-danger' onclick='eliminarEvento(" + evento.id + ")'>Eliminar</button>";
-	str = str + "</div>";
-	str = str + "</div>";
-	str = str + "<div class='row'>";
-	str = str + "<div class='col'>";
-	var iMins = evento.fecha.getMinutes();	
-	str = str + "<h6 class='modal-title' id='fechaEvento'>" + evento.fecha.toLocaleDateString() + " " + evento.fecha.getHours() + ":" + ((iMins>9)?iMins:"0"+iMins) + "</h6>";				
-	str = str + "</div>";
-	str = str + "</div>";
-	str = str + "</div>";
-	str = str + "<div class='modal-body'>";
-	str = str + "<h6 id='tematica'>" + evento.tematica + "</h6>";		
-	str = str + "<p id='descripcionEvento'>" + evento.descripcion + "</p>";
-	str = str + "<h6 id='organiza' align='center'>" + evento.organiza + "</h6>";
-	str = str + "</div>";
-	str = str + "<div class='modal-footer'>";
-	str = str + "<button type='button' class='btn btn-secondary' data-dismiss='modal'>Close</button>";
-	str = str + "</div>";
-	str = str + "</div>";
-	str = str + "</div>";
-	return str;
-}
-function eliminarEvento(id){
-	db.collection("Eventos").doc(id).delete()
 }
