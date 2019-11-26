@@ -6,6 +6,7 @@
 		<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
 		<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+		<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
 		<!-- Estilos propios y bootstrap-->
 		<!-- <link rel="stylesheet" href="style/style.css"> -->
 		<link rel="stylesheet" href="../styles/bootstrap-4.3.1-dist/css/bootstrap.css">
@@ -28,7 +29,63 @@
 	    <script src='../scripts/fullcalendar-4.3.1/packages/daygrid/main.js'></script>
 	    <script src='../scripts/fullcalendar-4.3.1/packages/interaction/main.js'></script>
 	    <script src='../scripts/fullcalendar-4.3.1/packages/core/locales/es.js'></script>
-		
+
+	    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+		<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+		<script>
+		$(function() {
+		  	$('input[name="fechaEvento"]').daterangepicker({
+			    singleDatePicker: true,
+			    timePicker: true,
+			    timePicker24Hour: true,
+			    minYear: parseInt(moment().format('YYYY')),
+			    maxYear: parseInt(moment().format('YYYY'))+2,
+			    locale: {
+			    	format: 'YYYY/MM/DD HH:mm',
+			    	cancelLabel: 'Cancelar',
+			    	applyLabel: 'Elegir',
+			    	monthNames: [
+		                "Enero",
+		                "Febrero",
+		                "Marzo",
+		                "Abril",
+		                "Mayo",
+		                "Junio",
+		                "Julio",
+		                "Agosto",
+		                "Septiembre",
+		                "Octubre",
+		                "Noviembre",
+		                "Diciembre"
+		            ],
+		            daysOfWeek: [
+		                "Dom",
+		                "Lun",
+		                "Mar",
+		                "Mie",
+		                "Jue",
+		                "Vie",
+		                "S&aacute;b"
+		            ],
+			    }
+		  	});
+		});
+		$(function() {
+		  	$('input[name="fechaReunion"]').daterangepicker({
+		  		timePicker: true,
+			    singleDatePicker: true,
+			    showDropdowns: true,
+			    minYear: parseInt(moment().format('YYYY')),
+			    maxYear: parseInt(moment().format('YYYY'))+2,
+			    locale: {
+			    	format: 'YYYY/MM/DD hh:mm A',
+			    	cancelLabel: 'Cancelar',
+			    	applyLabel: 'Elegir'
+			    }
+		  	});
+		});
+		</script>
 		<script>
 			var PAG = auth();
 			function auth(){
@@ -77,6 +134,7 @@
 		  </div>
 		</nav>
 		<div id="log"></div>
+		<div id="log2"></div>
 		<div class="container rounded-lg" style="background-color: #efefef;width: 70%;height: 100%;padding:5%" id="content">
 			<div style="padding-left:25%;padding-right: 25%;padding-top:5%;padding-bottom:5%">
 				<form onsubmit="return loginF()" name="login">
@@ -89,10 +147,6 @@
 		   			    <input type="password" name="pass" class="form-control" id="exampleInputPassword1" placeholder="Contraseña" required/>
 		   			</div>
 		   			<p id="aviso" class="text-success" style="width:320px;border-radius: 5px;"></p>
-		   			<div class="form-group form-check">
-		   			    <input type="checkbox" class="form-check-input" id="exampleCheck1">
-		   			    <label class="form-check-label" for="exampleCheck1">Mantenerse conectado</label>
-		   			</div>
 		           	<div align="center" id="loading">
 
 			           	<div class="spinner-border" role="status" style="color:#00c0b7">
@@ -104,7 +158,7 @@
 				</form>
 			</div>
 		</div>
-	<div class="modal" tabindex="-1" id="evento" role="dialog">
+		<div class="modal" tabindex="-1" id="evento" role="dialog">
 			<div class="modal-dialog" role="document">
 				<div class="modal-content">
 					<div class="modal-header" style="display: block">
@@ -132,10 +186,89 @@
 						
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+						<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
 					</div>
 				</div>
 			</div>
+		</div>
+		<div class="modal" tabindex="-1" id="aEvento" role="dialog">
+			<form name="agregarevento" onsubmit="return window.usuarioLogeado.agregarEvento()" novalidate>
+				<div class="modal-dialog" role="document">
+					<div class="modal-content">
+						<div class="modal-header" style="display: block">
+							<div class="row">
+								<div class="col">
+									<input type="text" class="form-control input" name="nom" placeholder="Nombre de evento" required>
+									<div id="feedbackNombreEvent"></div>
+								</div>
+								<div class="col">
+									<button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+										<span aria-hidden="true">&times;</span>
+									</button>
+								</div>
+								
+							</div>
+							<div class="row">
+									<div class="col">
+										Fecha: <input type="text" name="fechaEvento" value="" />
+										<div id="feedbackFechaEvent"></div>
+									</div>
+								</div>
+						</div>
+						<div class="modal-body">
+							<input type="text" class="form-control input" name="tematica" placeholder="temática del evento" required>
+							<div id="feedbackTematicaEvent"></div>
+							<textarea class="form-control" name="descripcion" rows="3" placeholder="Descripción del evento"></textarea>
+							<div id="feedbackDescEvent"></div>
+							
+						</div>
+						<div id="loadingFormEvent"></div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+							<button class="btn btn-primary" type="submit">Agregar</button>
+						</div>
+					</div>
+				</div>
+			</form>
+		</div>
+		<div class="modal" tabindex="-1" id="aReunion" role="dialog">
+			<form name="crear" onsubmit="return window.usuarioLogeado.agregarReunion()" novalidate>
+				<div class="modal-dialog" role="document">
+					<div class="modal-content">
+						<div class="modal-header" style="display: block">
+							<div class="row">
+								<div class="col">
+									<input type="text" class="form-control input" name="nom" placeholder="Titulo de la Reunión" required>
+									<div id="feedbackTituloReunion"></div>
+								</div>
+								<div class="col">
+									<button  type="button" class="close" data-dismiss="modal" aria-label="Close">
+										<span aria-hidden="true">&times;</span>
+									</button>
+								</div>
+								
+							</div>
+							<div class="row">
+									<div class="col">
+										Fecha: <input type="text" name="fechaReunion" value="" />
+										<div id="feedbackFechaReunion"></div>
+									</div>
+								</div>
+						</div>
+						<div class="modal-body">
+							<input type="text" class="form-control input" name="asunto" placeholder="Asunto de la Reunión" required>
+							<div id="feedbackAsuntoReunion"></div>
+							<textarea class="form-control" nom="descripcion" rows="3">Descripción de la Reunión</textarea>
+							<div id="feedbackDescReunion"></div>
+						</div>
+						<div id="loadingFormReunion"></div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+							<button class="btn btn-primary" type="submit">Agregar</button>
+						</div>
+					</div>
+				</div>
+			</form>
 		</div>
 	</body>
 </html>

@@ -264,8 +264,14 @@ function sacar(){
 async function despliegue(u, pagina){
 	document.getElementById("content").innerHTML="<div id='informacion'></div>";
 	await obtenerUsuario(u.email);
-	var str = "<button type='button' class='btn btn-outline-primary' style='float:right;' onClick='logOut()'>Log Out</button>" + window.usuarioLogeado.desplegarUsuario() + "<div id='calendar'></div>";
-	if(window.usuarioLogeado.cargo){
+	var str = "";
+	str = str + "<button type='button' class='btn btn-outline-primary' style='float:right;' onClick='logOut()'>Log Out</button>" + window.usuarioLogeado.desplegarUsuario();
+	if(window.usuarioLogeado.admin){
+		str = str + "<button type='button' class='btn btn-outline-primary' data-toggle='modal' data-target='#aEvento'>+ Evento</button>&nbsp;&nbsp;&nbsp;";
+		str = str + "<button type='button' class='btn btn-outline-primary' data-toggle='modal' data-target='#aReunion'>+ Reunión</button>";
+	}
+	str = str + "<div id='calendar'></div>";
+	if(window.usuarioLogeado.admin){
 		str = str + "<div id='users'></div>";
 	}
 	document.getElementById("informacion").innerHTML = str;
@@ -459,6 +465,7 @@ class Usuario{
 class Administrador extends Usuario{
 	constructor(nombre, cecosf, especialidad, correo){
 		super(nombre, cecosf, especialidad, correo);
+		this.admin=true;
 	}
 	desplegarUsuario(){
 		var str = "<div class='row'>";
@@ -552,7 +559,7 @@ class Administrador extends Usuario{
 		str = str + "<h5 class='modal-title' id='tituloEvento'>" + evento.title + "</h5>";
 		str = str + "</div>";
 		str = str + "<div class='col' align='right'>";
-		str = str + "<button type='button' class='btn btn-outline-danger' data-dismiss='modal' onclick=\"window.usuarioLogeado.eliminarEvento('" + evento.id + "')\">Eliminar</button>";
+		str = str + "<button type='button' class='btn btn-outline-danger' onclick=\"window.usuarioLogeado.eliminarEvento('" + evento.id + "','" + evento.extendedProps.nat + "')\">Eliminar</button>";
 		str = str + "</div>";
 		str = str + "</div>";
 		str = str + "<div class='row'>";
@@ -567,6 +574,7 @@ class Administrador extends Usuario{
 		str = str + "<p id='descripcionEvento'>" + evento.extendedProps.description + "</p>";
 		str = str + "<h6 id='organiza' align='center'>" + establecimiento(evento.extendedProps.organiza) + "</h6>";
 		str = str + "</div>";
+		str = str + "<div id='loadingEvent'></div>";
 		str = str + "<div class='modal-footer'>";
 		str = str + "<button type='button' class='btn btn-secondary' data-dismiss='modal'>Cerrar</button>";
 		str = str + "</div>";
@@ -574,9 +582,75 @@ class Administrador extends Usuario{
 		str = str + "</div>";
 		return str;
 	}
-	async eliminarEvento(eventId){
-		await firebase.firestore().collection("Eventos").doc(eventId).delete();
+	async eliminarEvento(eventId, naturaleza){
+		document.getElementById("loadingEvent").innerHTML = "<div align='center' id='loading'><div class='spinner-border' role='status' style='color:#00c0b7'><span class='sr-only'>Loading...</span></div><p style='color:#00c0b7'><small>Eliminando Evento</small></p></div>";
+		if(naturaleza=="evento"){
+			await firebase.firestore().collection("Eventos").doc(eventId).delete();
+		}else{
+			await firebase.firestore().collection("Reuniones").doc(eventId).delete();
+		}
 		this.calendar.getEventById(eventId).remove();
+		document.getElementById("loadingEvent").innerHTML = "";
+		$('#evento').modal('hide');
+	}
+	agregarEvento(){
+		document.getElementById("loadingFormEvent").innerHTML = "<div align='center' id='loading'><div class='spinner-border' role='status' style='color:#00c0b7'><span class='sr-only'>Loading...</span></div><p style='color:#00c0b7'><small id='loadingText'>Validando Evento</small></p></div>";
+		var validado = true;
+		var t = document.forms["agregarevento"]["nom"].value;
+		var f = document.forms["agregarevento"]["fechaEvento"].value;
+		var tem = document.forms["agregarevento"]["tematica"].value;
+		var d = document.forms["agregarevento"]["descripcion"].value;
+
+		var fN = document.getElementById("feedbackNombreEvent");
+		var fF = document.getElementById("feedbackFechaEvent");
+		document.getElementById("log").innerHTML = t;
+		if(t==""){
+			fN.innerHTML = "<div class='invalid-feedback'>Se requiere un título</div>";
+			validado = false;
+		}else{
+			fN.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+		}
+		f = Date.parse(new Date(f));
+		if(f < Date.now()){
+			fF.innerHTML = "<div class='invalid-feedback'>Eligió una fecha pasada</div>";
+			validado = false;
+		}else{
+			fF.innerHTML = "<div class='valid-feedback'>Parece correcto</div>";
+		}
+		if(validado){
+			document.getElementById("loadingText").innerHTML = "Agregando evento";
+			this.agregarEventoDB(t, f, tem, d);
+			$('#aEvento').modal('hide');
+			$('body').removeClass('modal-open');
+			$('.modal-backdrop').remove();
+		}
+		document.getElementById("loadingFormEvent").innerHTML = "";
+		return false;
+		
+		
+		
+	}
+	async agregarEventoDB(nombre, fecha, tematica, desc){
+		var evento;
+		await firebase.firestore().collection("Eventos").add({
+            cecosf: window.usuarioLogeado.cecosf,
+            nombre: nombre,
+            fecha: fecha,
+            tipo: tematica,
+            desc: desc
+        }).then(function(docRef) {
+			evento = {
+				"id": docRef.id,
+				"title": nombre,
+	    		"start": fecha,
+	    		"description": desc,
+	    		"organiza": window.usuarioLogeado.cecosf,
+	    		"tematica": tematica,
+	    		//EL ATRIBUTO NAT, INDICA SI ES UN EVENTO O UNA REUNION
+	    		"nat":"evento"
+	    	};
+		});
+    	this.calendar.addEvent(evento);
 	}
 }
 function establecimiento(palabra){
